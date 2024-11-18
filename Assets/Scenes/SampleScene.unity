@@ -145,7 +145,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &330585545
 Camera:
   m_ObjectHideFlags: 0
@@ -155,8 +155,8 @@ Camera:
   m_GameObject: {fileID: 330585543}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -205,13 +205,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.23, z: -18.88}
+  m_LocalRotation: {x: -0.010960613, y: 0.27480593, z: -0.0031328697, w: 0.96143216}
+  m_LocalPosition: {x: -31.9, y: -1.1, z: -40.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -1.109, y: 31.91, z: -0.69}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -455,13 +455,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c922c3e5f2b817f4abb54588821070a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  deltaT: 0.001
+  deltaT: 0.01
   influenceRadius: 0.1
+  bounce: 0.9
   boundingBox: {x: 30, y: 30, z: 30}
   spawnBoxCenter: {x: 0, y: 3, z: 0}
   spawnBox: {x: 10, y: 10, z: 10}
-  particleRadius: 1
-  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  particleRadius: 0.5
+  mesh: {fileID: 2540817853737639666, guid: 36b4f9e048970d44bb72dd6b3a083317, type: 3}
   material: {fileID: 2100000, guid: d2d5cd7e74ee7924d8fc672e39a26a06, type: 2}
   computeShader: {fileID: 7200000, guid: 302b942206bc6844e95c217fea7a8366, type: 3}
   particles: []
