@@ -27,10 +27,10 @@ Shader "Custom/InstancedIndirectColor" {
                 v2f o;
 
                 float4x4 mat = {
-                                    ParticleRadius, 0.f, 0.f, Particles[instanceID].x,
-                                    0.f, ParticleRadius, 0.f, Particles[instanceID].y,
-                                    0.f, 0.f, ParticleRadius, Particles[instanceID].z,
-                                    0.f, 0.f, 1.f, 1.f
+                                    50*ParticleRadius, 0.f, 0.f, Particles[instanceID].x,
+                                    0.f, 50*ParticleRadius, 0.f, Particles[instanceID].y,
+                                    0.f, 0.f, 50*ParticleRadius, Particles[instanceID].z,
+                                    0.f, 0.f, 0, 1.f
                                 };
                 // mat._11_22_33_44 = float4(1, 1, 1, 1);
                 // mat._14_24_34_44 = float4(_Particles[instanceID].xyz, 1);

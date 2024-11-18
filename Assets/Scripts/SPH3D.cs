@@ -19,12 +19,18 @@ public class SPH3D : MonoBehaviour
 
     [Header("SPH Constants")]
     public float deltaT = 0.01f;
-    public float influenceRadius = 0.1f;
+    public float bounce = 0.9f;
     private float pi = Mathf.PI;
     private float G = 9.81f;    
 
+    public static float influenceRadius = 10.f;
+    private float influenceRadius2 = influenceRadius * influenceRadius;
+    private float influenceRadius3 = influenceRadius2 * influenceRadius;
+    private float influenceRadius6 = influenceRadius3 * influenceRadius3;
+    private float influenceRadius9 = influenceRadius6 * influenceRadius3;
+
     [Header("Spawn Data")]
-    public static Vector3Int numToSpawn = new Vector3Int(2,2,2);
+    public static Vector3Int numToSpawn = new Vector3Int(10,10,10);
     public Vector3 boundingBox = new Vector3(30,30,30);
     public Vector3 spawnBoxCenter = new Vector3(0,3,0);
     public Vector3 spawnBox = new Vector3(10,10,10);
@@ -101,9 +107,17 @@ public class SPH3D : MonoBehaviour
         densitiesBuffer.SetData(densities);
 
         computeShader.SetFloat("DeltaTime", deltaT);
-        computeShader.SetFloat("InfluenceRadius", influenceRadius);
+        computeShader.SetFloat("Bounce", bounce);
         computeShader.SetFloat("Pi", pi);
         computeShader.SetFloat("G", G);
+        Vector4 boundingBox = new Vector4(this.boundingBox.x, this.boundingBox.y, this.boundingBox.z, 0);
+        computeShader.SetVector("BoundingBox", boundingBox);
+
+        computeShader.SetFloat("InfluenceRadius", influenceRadius);
+        computeShader.SetFloat("InfluenceRadius2", influenceRadius2);
+        computeShader.SetFloat("InfluenceRadius3", influenceRadius3);
+        computeShader.SetFloat("InfluenceRadius6", influenceRadius6);
+        computeShader.SetFloat("InfluenceRadius9", influenceRadius9);
 
         integrateID = computeShader.FindKernel("Integrate");
         computeForcesID = computeShader.FindKernel("ComputeForces");

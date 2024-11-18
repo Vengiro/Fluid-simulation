@@ -13,9 +13,15 @@ RWStructuredBuffer<float> pressures;
 RWStructuredBuffer<float> densities;
 
 float DeltaTime;
-float InfluenceRadius;
+float Bounce;
 float Pi;
 float G;
+float3 BoundingBox;
+float InfluenceRadius;
+float InfluenceRadius2;
+float InfluenceRadius3;
+float InfluenceRadius6;
+float InfluenceRadius9;
 
 
 
@@ -41,10 +47,44 @@ void Integrate (uint3 id : SV_DispatchThreadID)
     float density = densities[id.x];
     float pressure = pressures[id.x];
 
-    
-    particles[id.x] = pos + vel * DeltaTime;
+
     velocities[id.x] = vel + force * DeltaTime;
+    particles[id.x] = pos + vel * DeltaTime;
     forces[id.x] = float3(0, 0, 0);
+
+
+    // Bounce on walls
+    if(particles[id.x].x < -BoundingBox.x/2)
+    {
+        particles[id.x].x = -BoundingBox.x/2;
+        velocities[id.x].x = -velocities[id.x].x * Bounce;
+    }
+    if(particles[id.x].x > BoundingBox.x/2)
+    {
+        particles[id.x].x = BoundingBox.x/2;
+        velocities[id.x].x = -velocities[id.x].x * Bounce;
+    }
+    if(particles[id.x].y < -BoundingBox.y/2)
+    {
+        particles[id.x].y = -BoundingBox.y/2;
+        velocities[id.x].y = -velocities[id.x].y * Bounce;
+    }
+    if(particles[id.x].y > BoundingBox.y/2)
+    {
+        particles[id.x].y = BoundingBox.y/2;
+        velocities[id.x].y = -velocities[id.x].y * Bounce;
+    }
+    if(particles[id.x].z < -BoundingBox.z/2)
+    {
+        particles[id.x].z = -BoundingBox.z/2;
+        velocities[id.x].z = -velocities[id.x].z * Bounce;
+    }
+    if(particles[id.x].z > BoundingBox.z/2)
+    {
+        particles[id.x].z = BoundingBox.z/2;
+        velocities[id.x].z = -velocities[id.x].z * Bounce;
+    }
+
     
 }
 
