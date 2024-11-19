@@ -12,40 +12,53 @@ RWStructuredBuffer<float3> forces;
 RWStructuredBuffer<float> pressures;
 RWStructuredBuffer<float> densities;
 
+float Mass;
 float DeltaTime;
 float Bounce;
 float Pi;
 float G;
+float K;
+float RestDensity;
+float Viscosity;
 float3 BoundingBox;
-float InfluenceRadius;
-float InfluenceRadius2;
-float InfluenceRadius3;
-float InfluenceRadius6;
-float InfluenceRadius9;
+float InflRad;
+float InflRad2;
+float InflRad3;
+float InflRad6;
+float InflRad9;
 
 
 
-float sphKernel (float3 diff)
+float densityKernel (float3 diff)
 {
-    float r2 = dot(diff, diff);
-    if (r2 < 0.0001)
-    {
-        return 1;
+    float r = length(diff);
+    if(r > InflRad){
+        return 0;
     }
-    else
-    {
-        return 1 - sqrt(r2) / 0.1;
+    else{
+        return 315.0f / (64.0f * Pi * InflRad9) * pow(InflRad2 - r*r, 3);
     }
 }
 
-[numthreads(8,1,1)]
+float3 pressureKernelGradient (float3 diff, float r)
+{
+    
+    return -45.0f / (Pi * InflRad6) * (r-InflRad) * (r-InflRad) * diff / r;
+}
+
+float3 viscosityKernelLaplacian (float r)
+{
+    return 45.0f / (Pi * InflRad6) * (InflRad - r);
+}
+
+
+
+[numthreads(128,1,1)]
 void Integrate (uint3 id : SV_DispatchThreadID)
 {
     float3 pos = particles[id.x];
     float3 vel = velocities[id.x];
     float3 force = forces[id.x];
-    float density = densities[id.x];
-    float pressure = pressures[id.x];
 
 
     velocities[id.x] = vel + force * DeltaTime;
@@ -54,33 +67,27 @@ void Integrate (uint3 id : SV_DispatchThreadID)
 
 
     // Bounce on walls
-    if(particles[id.x].x < -BoundingBox.x/2)
-    {
+    if(particles[id.x].x < -BoundingBox.x/2){
         particles[id.x].x = -BoundingBox.x/2;
         velocities[id.x].x = -velocities[id.x].x * Bounce;
     }
-    if(particles[id.x].x > BoundingBox.x/2)
-    {
+    if(particles[id.x].x > BoundingBox.x/2){
         particles[id.x].x = BoundingBox.x/2;
         velocities[id.x].x = -velocities[id.x].x * Bounce;
     }
-    if(particles[id.x].y < -BoundingBox.y/2)
-    {
+    if(particles[id.x].y < -BoundingBox.y/2){
         particles[id.x].y = -BoundingBox.y/2;
         velocities[id.x].y = -velocities[id.x].y * Bounce;
     }
-    if(particles[id.x].y > BoundingBox.y/2)
-    {
+    if(particles[id.x].y > BoundingBox.y/2){
         particles[id.x].y = BoundingBox.y/2;
         velocities[id.x].y = -velocities[id.x].y * Bounce;
     }
-    if(particles[id.x].z < -BoundingBox.z/2)
-    {
+    if(particles[id.x].z < -BoundingBox.z/2){
         particles[id.x].z = -BoundingBox.z/2;
         velocities[id.x].z = -velocities[id.x].z * Bounce;
     }
-    if(particles[id.x].z > BoundingBox.z/2)
-    {
+    if(particles[id.x].z > BoundingBox.z/2){
         particles[id.x].z = BoundingBox.z/2;
         velocities[id.x].z = -velocities[id.x].z * Bounce;
     }
@@ -88,28 +95,37 @@ void Integrate (uint3 id : SV_DispatchThreadID)
     
 }
 
-[numthreads(8,1,1)]
+[numthreads(128,1,1)]
 void ComputeForces (uint3 id : SV_DispatchThreadID)
 {
-    float3 pos = particles[id.x];
     float3 vel = velocities[id.x];
-    float3 force = forces[id.x];
-    float density = densities[id.x];
     float pressure = pressures[id.x];
 
+    float3 gravity = G * float3(0, -1, 0);
+    float3 pressureForce = float3(0, 0, 0);
+    float3 viscosityForce = float3(0, 0, 0);
 
-    forces[id.x] = G * float3(0, -1, 0);
+    for(uint i=0; i < particles.Length; i++){
+        if(i == id.x) continue;
+        float3 diff = particles[id.x] - particles[i];
+        float r = length(diff);
+        if(r < InflRad){
+            pressureForce += -Mass * (pressure+pressures[i]) / (2*densities[i]) * pressureKernelGradient(diff, r);
+            viscosityForce += Viscosity * Mass * (velocities[i]-vel) / densities[i] * viscosityKernelLaplacian(r);
+        }
+    }
+
+    forces[id.x] = gravity + pressureForce + viscosityForce;
 }
 
-[numthreads(8,1,1)]
+[numthreads(128,1,1)]
 void ComputeDensityAndPressure (uint3 id : SV_DispatchThreadID)
 {
-    float3 pos = particles[id.x];
-    float3 vel = velocities[id.x];
-    float3 force = forces[id.x];
-    float density = densities[id.x];
-    float pressure = pressures[id.x];
-    
-    densities[id.x] = 1;
-    pressures[id.x] = 1;
+    float density = 0;
+    for(uint i = 0; i < particles.Length; i++){
+        float3 diff = particles[id.x] - particles[i];
+        density += Mass * densityKernel(diff);
+    }
+    densities[id.x] = density;
+    pressures[id.x] = K * (density - RestDensity);
 }
