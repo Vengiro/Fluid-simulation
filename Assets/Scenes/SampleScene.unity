@@ -455,12 +455,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c922c3e5f2b817f4abb54588821070a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  deltaT: 0.01
-  influenceRadius: 0.1
-  bounce: 0.9
+  mass: 1
+  deltaT: 0.005
+  bounce: 0.1
+  k: 20
+  restDensity: 3
+  viscosity: 0.1
   boundingBox: {x: 30, y: 30, z: 30}
   spawnBoxCenter: {x: 0, y: 3, z: 0}
-  spawnBox: {x: 10, y: 10, z: 10}
+  spawnBox: {x: 24, y: 24, z: 24}
   particleRadius: 0.5
   mesh: {fileID: 2540817853737639666, guid: 36b4f9e048970d44bb72dd6b3a083317, type: 3}
   material: {fileID: 2100000, guid: d2d5cd7e74ee7924d8fc672e39a26a06, type: 2}
