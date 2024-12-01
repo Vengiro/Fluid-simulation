@@ -35,7 +35,7 @@ public class SPH3D : MonoBehaviour
     private static float influenceRadius9 = influenceRadius6 * influenceRadius3;
 
     [Header("Spawn Data")]
-    public static Vector3Int numToSpawn = new Vector3Int(24,24,24);
+    public static Vector3Int numToSpawn = new Vector3Int(16,16,16);
     public Vector3 boundingBox = new Vector3(30,30,30);
     public Vector3 spawnBoxCenter = new Vector3(0,3,0);
     public Vector3 spawnBox = new Vector3(24,24,24);

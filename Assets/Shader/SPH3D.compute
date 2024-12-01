@@ -42,7 +42,7 @@ float densityKernel (float3 diff)
 
 float3 pressureKernelGradient (float3 diff, float r)
 {
-    
+    if(r == 0) return float3(0, 0, 0);
     return -45.0f / (Pi * InflRad6) * (r-InflRad) * (r-InflRad) * diff / r;
 }
 

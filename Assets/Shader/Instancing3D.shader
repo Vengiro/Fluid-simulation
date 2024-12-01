@@ -1,5 +1,8 @@
 
 Shader "Custom/InstancedIndirectColor" {
+    Properties {
+        _ParticleRadius ("Particle Radius", Float) = 1.0 // Default value for particle radius
+    }
     SubShader {
         Tags { "RenderType" = "Opaque" }
 
