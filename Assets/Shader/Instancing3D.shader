@@ -1,5 +1,5 @@
 
-Shader "Custom/InstancedIndirectColor" {
+Shader "Custom/InstancedIndirectColor3D" {
     Properties {
         _ParticleRadius ("Particle Radius", Float) = 1.0 // Default value for particle radius
     }

@@ -28,14 +28,10 @@ public class SPH3D : MonoBehaviour
     public float viscosity = 0.1f;
      
 
-    public static float influenceRadius = 4f;
-    private static float influenceRadius2 = influenceRadius * influenceRadius;
-    private static float influenceRadius3 = influenceRadius * influenceRadius2;
-    private static float influenceRadius6 = influenceRadius3 * influenceRadius3;
-    private static float influenceRadius9 = influenceRadius6 * influenceRadius3;
+    public float influenceRadius = 4f;
 
     [Header("Spawn Data")]
-    public static Vector3Int numToSpawn = new Vector3Int(16,16,16);
+    public static Vector3Int numToSpawn = new Vector3Int(4,4,8);
     public Vector3 boundingBox = new Vector3(30,30,30);
     public Vector3 spawnBoxCenter = new Vector3(0,3,0);
     public Vector3 spawnBox = new Vector3(24,24,24);
@@ -124,6 +120,11 @@ public class SPH3D : MonoBehaviour
         Vector4 boundingBox = new Vector4(this.boundingBox.x, this.boundingBox.y, this.boundingBox.z, 0);
         computeShader.SetVector("BoundingBox", boundingBox);
 
+        
+        float influenceRadius2 = influenceRadius * influenceRadius;
+        float influenceRadius3 = influenceRadius * influenceRadius2;
+        float influenceRadius6 = influenceRadius3 * influenceRadius3;
+        float influenceRadius9 = influenceRadius6 * influenceRadius3;
         computeShader.SetFloat("InflRad", influenceRadius);
         computeShader.SetFloat("InflRad2", influenceRadius2);
         computeShader.SetFloat("InflRad3", influenceRadius3);
