@@ -177,7 +177,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 22
   far clip plane: 1000
   field of view: 60
   orthographic: 0
@@ -206,7 +206,7 @@ Transform:
   m_GameObject: {fileID: 727000022}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 25, y: 12.5, z: -22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -407,12 +407,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   verticalVelocities: []
-  copyVert: []
   horizontalVelocities: []
-  copyHor: []
-  width: 10
-  height: 10
-  deltaT: 0.0001
+  vertBound: 
+  horBound: 
+  densities: []
+  pos: []
+  width: 50
+  height: 25
+  deltaT: 0.01
+  maxDensity: 100
+  cellSize: 1
+  restDensity: 100
+  overRelaxation: 1.9
+  divIter: 100
+  mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  material: {fileID: 2100000, guid: 9292f1acf736bf740b619d7e71d52225, type: 2}
+  updateRate: 0.1
+  res: 0
 --- !u!4 &1399203744
 Transform:
   m_ObjectHideFlags: 0

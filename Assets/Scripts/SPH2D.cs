@@ -19,22 +19,22 @@ public class SPH2D : MonoBehaviour
 
     [Header("SPH Constants")]
     public float mass = 1.0f;
-    public float deltaT = 0.005f;
-    public float bounce = 0.1f;
+    public float deltaT = 0.01f;
+    public float bounce = 0.3f;
     private float pi = Mathf.PI;
     private float G = 9.81f;
-    public float k = 20f;
-    public float restDensity = 3f;   
-    public float viscosity = 0.1f;
+    public float k = 100f;
+    public float restDensity = 5f;   
+    public float viscosity = 0.5f;
      
 
     public float influenceRadius = 4f;
 
     [Header("Spawn Data")]
-    public Vector2Int numToSpawn = new Vector2Int(16,16);
-    public Vector2 boundingBox = new Vector2(50,30);
+    public Vector2Int numToSpawn = new Vector2Int(128,96);
+    public Vector2 boundingBox = new Vector2(300,200);
     public Vector2 spawnBoxCenter = new Vector2(0,0);
-    public Vector2 spawnBox = new Vector2(24,24);
+    public Vector2 spawnBox = new Vector2(256,192);
     public float particleRadius = 1f;
 
     [Header("Rendering Data")]
@@ -52,7 +52,7 @@ public class SPH2D : MonoBehaviour
     private int threadsPerGroup = 128;
 
 
-    private ComputeBuffer particlesBuffer;
+    public ComputeBuffer particlesBuffer;
     private ComputeBuffer argsBuffer;
 
     
@@ -129,7 +129,6 @@ public class SPH2D : MonoBehaviour
 
     // Update is called once per frame
     private void Update(){
-        material.SetBuffer("Particles", particlesBuffer);
 		Graphics.DrawMeshInstancedIndirect(mesh, 0, material, new Bounds(Vector3.zero, new Vector3(500.0f, 500.0f, 500.0f)), argsBuffer, castShadows: UnityEngine.Rendering.ShadowCastingMode.Off);
 	}
     
@@ -139,7 +138,7 @@ public class SPH2D : MonoBehaviour
         computeShader.Dispatch(computeForcesID, particlesCount/threadsPerGroup, 1, 1);
         computeShader.Dispatch(integrateID, particlesCount/threadsPerGroup, 1, 1);
 
-        particlesBuffer.GetData(particles);
+        //particlesBuffer.GetData(particles);
 
     
 
