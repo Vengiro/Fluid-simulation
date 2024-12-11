@@ -164,11 +164,11 @@ void HandleMouseClick(int button)
             for(int i=0; i<height; i++){
                 for(int j=0; j<width; j++){
                     if(clicked[j + i * width]){
-                        IncreaseVelocityAtCell(j, i, false);
+                        //IncreaseVelocityAtCell(j, i, false);
                     }
                     if(j==0 && i < 2*height / 3 && i > height / 3){
                         densities[j + i * width] = maxDensity;
-                        horizontalVelocities[j + i * (width+1)] = 15.0f;
+                        horizontalVelocities[j + i * (width+1)] = 5.0f;
                     }
                 }
                     
@@ -193,20 +193,21 @@ void HandleMouseClick(int button)
         for(int n=0; n<divIter; n++){
             for(int i=0; i<height; i++){
                 for(int j=0; j<width; j++){
-                    float div = verticalVelocities[j+i*width]-verticalVelocities[j+(i+1)*width] + 
-                                horizontalVelocities[j+i*width]-horizontalVelocities[j+1+i*width];
+                    float div = -verticalVelocities[j+i*width]+verticalVelocities[j+(i+1)*width] + 
+                                -horizontalVelocities[j+i*(width+1)]+horizontalVelocities[j+1+i*(width+1)];
                     div *= overRelaxation;
                     int vup = vertBound[j + (i+1) * width] ? 0 : 1;
                     int vdown = vertBound[j + i * width] ? 0 : 1;
                     int hleft = horBound[j + i * (width+1)] ? 0 : 1;
                     int hright = horBound[j+1 + i * (width+1)] ? 0 : 1;
                     int tot = vup+vdown+hleft+hright;
+                    
 
 
-                    verticalVelocities[j+i*width]-=vdown*div/tot;
-                    verticalVelocities[j+(i+1)*width]+=vup*div/tot;
-                    horizontalVelocities[j+i*width]-=hleft*div/tot;
-                    horizontalVelocities[j+1+i*width]+=hright*div/tot;
+                    verticalVelocities[j+i*width]+=vdown*div/tot;
+                    verticalVelocities[j+(i+1)*width]-=vup*div/tot;
+                    horizontalVelocities[j+i*(width+1)]+=hleft*div/tot;
+                    horizontalVelocities[j+1+i*(width+1)]-=hright*div/tot;
                 }
             }
         }
@@ -215,21 +216,60 @@ void HandleMouseClick(int button)
     float avgVert(int x, int y)
     {
         // up left, up right etc.
-        int yul = (int)(Mathf.Max(x-1, 0) + (y+1)*width);
-        int yur = (int)(Mathf.Min(x, width-1) + (y+1)*width);
-        int ydl = (int)(Mathf.Max(x-1, 0) + y*width);
-        int ydr = (int)(Mathf.Min(x, width-1) + y*width);
-        return (verticalVelocities[yul]+verticalVelocities[yur]+verticalVelocities[ydl]+verticalVelocities[ydr])/4;
+        int yul = (x-1) >= 0 ? (x-1) + (y+1)*width : -1;
+        int yur = x < width ? x + (y+1)*width : -1;
+        int ydl = (x-1) >= 0 ? (x-1) + y*width : -1;
+        int ydr = x < width ? x + y*width : -1;
+
+        float vel = 0;
+        int count = 0;
+        if(yul != -1){
+            vel += verticalVelocities[yul];
+            count++;
+        }
+        if(yur != -1){
+            vel += verticalVelocities[yur];
+            count++;
+        }
+        if(ydl != -1){
+            vel += verticalVelocities[ydl];
+            count++;
+        }
+        if(ydr != -1){
+            vel += verticalVelocities[ydr];
+            count++;
+        }
+        return vel/count;
+        
     }
 
      float avgHor(int x, int y)
     {
         // up left, up right etc.
-        int xul = (int)(x + Mathf.Min(y, height-1)*(width+1));
-        int xur = (int)(x+1 + Mathf.Min(y, 0, height-1)*(width+1));
-        int xdl = (int)(x + Mathf.Max(y-1, 0)*(width+1));
-        int xdr = (int)(x+1 + Mathf.Max(y-1, 0)*(width+1));
-        return (horizontalVelocities[xul]+horizontalVelocities[xur]+horizontalVelocities[xdl]+horizontalVelocities[xdr])/4;
+        int xul = y < height ? x + y*(width+1) : -1;
+        int xur = y < height ? x+1 + y*(width+1) : -1;
+        int xdl = (y-1) >= 0 ? x + (y-1)*(width+1) : -1;
+        int xdr = (y-1) >= 0 ? x+1 + (y-1)*(width+1) : -1;
+
+        float vel = 0;
+        int count = 0;
+        if(xul != -1){
+            vel += horizontalVelocities[xul];
+            count++;
+        }
+        if(xur != -1){
+            vel += horizontalVelocities[xur];
+            count++;
+        }
+        if(xdl != -1){
+            vel += horizontalVelocities[xdl];
+            count++;
+        }
+        if(xdr != -1){
+            vel += horizontalVelocities[xdr];
+            count++;
+        }
+        return vel/count;
     }
     float bilineraInter(float x, float y, float[] data, int width, int height)
     {
@@ -296,22 +336,15 @@ void HandleMouseClick(int button)
         
     }
 
-    Vector2 avgCell(int x, int y){
-        Vector2 avg = new Vector2(0, 0);
-        avg.x = (float)((horizontalVelocities[x + y * (width + 1)] + horizontalVelocities[x + 1 + y * (width + 1)])*0.5);
-        avg.y = (float)((verticalVelocities[x + y * width] + verticalVelocities[x + (y + 1) * width])*0.5);
-        return avg;
-    }
+
 
     public float res;
     void advectDensity()
     {
         for(int i=0; i<height; i++){
             for(int j=0; j<width; j++){
-                // In the middle of the cell
-                Vector2 avg = avgCell(j, i);
-                float x = j - deltaT*avg.x;
-                float y = i - deltaT*avg.y;
+                float x = j - deltaT*(horizontalVelocities[j+i*(width+1)] + horizontalVelocities[j+1+i*(width+1)])/2;
+                float y = i - deltaT*(verticalVelocities[j+i*width] + verticalVelocities[j+(i+1)*width])/2;
 
                 x = Mathf.Clamp(x, 0, width-1);
                 y = Mathf.Clamp(y, 0, height-1);
@@ -350,7 +383,14 @@ void HandleMouseClick(int button)
             for (int i = 0; i < height; i++)
             {
                 for (int j = 0; j < width; j++)
-                {
+                {   
+                    float div = verticalVelocities[j+i*width]-verticalVelocities[j+(i+1)*width] + 
+                                horizontalVelocities[j+i*(width+1)]-horizontalVelocities[j+1+i*(width+1)];
+                    if(div < -0.001 || div > 0.001){
+                        Gizmos.color = Color.red;
+                        Gizmos.DrawWireCube(new Vector3(j , i , 0), new Vector3(1, 1, 0));
+                        Gizmos.color = Color.white;
+                    }
                     // Compute position at the center of the cell
                     Vector3 position = new Vector3(j + 0.5f, i + 0.5f, 0);
 

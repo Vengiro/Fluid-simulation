@@ -18,17 +18,17 @@ public class SPH2D : MonoBehaviour
 {
 
     [Header("SPH Constants")]
-    public float mass = 1.0f;
-    public float deltaT = 0.01f;
+    public float mass = 2.0f;
+    public float deltaT = 1;
     public float bounce = 0.3f;
     private float pi = Mathf.PI;
     private float G = 9.81f;
-    public float k = 100f;
-    public float restDensity = 5f;   
+    public float k = 2000;
+    public float restDensity = 300;   
     public float viscosity = 0.5f;
      
 
-    public float influenceRadius = 4f;
+    public float influenceRadius = 2.0f;
 
     [Header("Spawn Data")]
     public Vector2Int numToSpawn = new Vector2Int(128,96);
@@ -138,6 +138,25 @@ public class SPH2D : MonoBehaviour
         computeShader.Dispatch(computeForcesID, particlesCount/threadsPerGroup, 1, 1);
         computeShader.Dispatch(integrateID, particlesCount/threadsPerGroup, 1, 1);
 
+        computeShader.SetFloat("Mass", mass);
+        computeShader.SetFloat("DeltaTime", deltaT);
+        computeShader.SetFloat("Bounce", bounce);
+        computeShader.SetFloat("Pi", pi);
+        computeShader.SetFloat("G", G);
+        computeShader.SetFloat("K", k);
+        computeShader.SetFloat("RestDensity", restDensity);
+        computeShader.SetFloat("Viscosity", viscosity);
+
+        float influenceRadius2 = influenceRadius * influenceRadius;
+        float influenceRadius3 = influenceRadius * influenceRadius2;
+        float influenceRadius6 = influenceRadius3 * influenceRadius3;
+        float influenceRadius9 = influenceRadius6 * influenceRadius3;
+        computeShader.SetFloat("InflRad", influenceRadius);
+        computeShader.SetFloat("InflRad2", influenceRadius2);
+        computeShader.SetFloat("InflRad3", influenceRadius3);
+        computeShader.SetFloat("InflRad6", influenceRadius6);
+        computeShader.SetFloat("InflRad9", influenceRadius9);
+        particlesBuffer.GetData(particles);
         //particlesBuffer.GetData(particles);
 
     
