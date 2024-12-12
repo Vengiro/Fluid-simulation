@@ -73,13 +73,7 @@ public class Eulerian2D : MonoBehaviour
         }
         for(int i=0; i<height; i++){
             for(int j=0; j<width; j++){
-                if (j < 3 && i < 2*height / 3 && i > height / 3)
-            {
-                densities[j + i * width] = restDensity;
-            }
-            else{
                 densities[j + i * width] = 0;
-            }
                 copyDens[j + i * width] = 0;
                 pos[j + i * width] = new Vector2(j, i);
             }
@@ -109,6 +103,19 @@ public class Eulerian2D : MonoBehaviour
         */
     }
 
+void opaqueCell(int x, int y)
+{
+    densities[x + y * width] = 0;
+    vertBound[x + y * width] = true;
+    vertBound[x + (y+1) * width] = true;
+    horBound[x + y * (width+1)] = true;
+    horBound[x+1 + y * (width+1)] = true;
+    verticalVelocities[x + y * width] = 0;
+    verticalVelocities[x + (y+1) * width] = 0;
+    horizontalVelocities[x + y * (width+1)] = 0;
+    horizontalVelocities[x+1 + y * (width+1)] = 0;
+
+}
 void HandleMouseClick(int button)
 {
     Vector3 mouseScreenPos = Input.mousePosition;
@@ -124,8 +131,10 @@ void HandleMouseClick(int button)
     {
         if (button == 0)
         {
-            IncreaseVelocityAtCell(cellX, cellY, false);
+            //IncreaseVelocityAtCell(cellX, cellY, false);
+            opaqueCell(cellX, cellY);
             clicked[cellX + cellY * width] = !clicked[cellX + cellY * width];
+
         }
         else if (button == 1)
         {
@@ -157,34 +166,22 @@ void HandleMouseClick(int button)
     private float timeSinceLastUpdate = 0f;
     void FixedUpdate()
     {
-         timeSinceLastUpdate += Time.fixedDeltaTime;
         
-        if (timeSinceLastUpdate >= updateRate)
-        {
-            for(int i=0; i<height; i++){
-                for(int j=0; j<width; j++){
-                    if(clicked[j + i * width]){
-                        //IncreaseVelocityAtCell(j, i, false);
-                    }
-                    if(j==0 && i < 2*height / 3 && i > height / 3){
-                        densities[j + i * width] = maxDensity;
-                        horizontalVelocities[j + i * (width+1)] = 5.0f;
-                    }
-                }
-                    
-            }
-            advectDensity();
-            advect();
-            
-            clearDivergence();
-            
-            
-            densityBuffer.SetData(densities);
-            material.SetBuffer("DensityBuffer", densityBuffer);
+        horBound[height/2 * (width+1)] = false;
+        horBound[height/2 * (width+1) - 1] = false;
+        densities[height/2 * width] = maxDensity;
+        horizontalVelocities[height/2 * (width+1)] = 5.0f;
+        advectDensity();
+        advect();
+        
+        clearDivergence();
+        
+        
+        densityBuffer.SetData(densities);
+        material.SetBuffer("DensityBuffer", densityBuffer);
             
            
-            timeSinceLastUpdate = 0f;
-        }
+        
     }
 
     
@@ -201,6 +198,7 @@ void HandleMouseClick(int button)
                     int hleft = horBound[j + i * (width+1)] ? 0 : 1;
                     int hright = horBound[j+1 + i * (width+1)] ? 0 : 1;
                     int tot = vup+vdown+hleft+hright;
+                    if(tot == 0) continue;
                     
 
 
@@ -294,6 +292,10 @@ void HandleMouseClick(int button)
         for(int i=0; i<height+1; i++){
             for(int j=0; j<width; j++){
                 // In the middle of the edge x axis
+                if(vertBound[j + i * width]){
+                    copyVert[j + i * width] = 0;
+                    continue;
+                }
                 float x = j + 0.5f - deltaT*avgHor(j, i);
                 float y = i - deltaT*verticalVelocities[j+i*width];
 
@@ -312,6 +314,10 @@ void HandleMouseClick(int button)
         for(int i=0; i<height; i++){
             for(int j=0; j<width+1; j++){
                 // In the middle of the edge y axis
+                if(horBound[j + i * (width+1)]){
+                    copyHor[j + i * (width+1)] = 0;
+                    continue;
+                }
                 float x = j - deltaT*horizontalVelocities[j+i*(width+1)];
                 float y = i+ 0.5f - deltaT*avgVert(j, i);
 
