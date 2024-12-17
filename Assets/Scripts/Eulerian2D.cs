@@ -6,30 +6,44 @@ public class Eulerian2D : MonoBehaviour
     private float[] copyVert;
     public float[] horizontalVelocities;
     private float[] copyHor;
-    public bool[] vertBound;
-    public bool[] horBound;
+    public int[] vertBound;
+    public int[] horBound;
     public float[] densities;
     private float[] copyDens;
     public Vector2[] pos;
 
+    [Header("Params")]
     public int width = 10;
     public int height = 10;
     public float deltaT = 0.005f;
     public float maxDensity = 100.0f;
     public float cellSize = 1.0f;
-    public float restDensity = 1.0f;
     public float overRelaxation = 1.9f;
     public int divIter = 100;
 
+    public ComputeShader computeShader;
+
+    private ComputeBuffer vertVelBuffer;
+    private ComputeBuffer horVelBuffer;
+    private ComputeBuffer copyVertBuffer;
+    private ComputeBuffer copyHorBuffer;
+    private ComputeBuffer vertBoundBuffer;
+    private ComputeBuffer horBoundBuffer;
     private ComputeBuffer densityBuffer;
     private ComputeBuffer positionBuffer;
     public ComputeBuffer argsBuffer;
 
-     [Header("Rendering Data")]
+    [Header("Rendering Data")]
     public Mesh mesh;
 	public Material material;
 
     private  bool[] clicked;
+
+    private int numThreads = 10;
+    private int kernelAdvect;
+    private int kernelAdvectDen;
+    private int kernelClearDiv1;
+    private int kernelClearDiv2;
 
 
 
@@ -40,8 +54,8 @@ public class Eulerian2D : MonoBehaviour
         copyVert = new float[width * (height+1)];
         horizontalVelocities = new float[(width+1) * height];
         copyHor = new float[(width+1) * height];
-        vertBound = new bool[width * (height+1)];
-        horBound = new bool[(width+1) * height];
+        vertBound = new int[width * (height+1)];
+        horBound = new int[(width+1) * height];
         densities = new float[width * height];
         copyDens = new float[width * height];
         pos = new Vector2[width * height];
@@ -51,10 +65,10 @@ public class Eulerian2D : MonoBehaviour
                 verticalVelocities[j + i * width] = 0;
                 copyVert[j + i * width] = 0;
                 if(i==0 || i==height){
-                    vertBound[j + i * width] = true;
+                    vertBound[j + i * width] = 1;
                 }
                 else{
-                    vertBound[j + i * width] = false;
+                    vertBound[j + i * width] = 0;
                 }
             }
         }
@@ -63,10 +77,10 @@ public class Eulerian2D : MonoBehaviour
                 horizontalVelocities[j + i * (width+1)] = 0;
                 copyHor[j + i * (width+1)] = 0;
                 if(j==0 || j==width){
-                    horBound[j + i * (width+1)] = true;
+                    horBound[j + i * (width+1)] = 1;
                 }
                 else{
-                    horBound[j + i * (width+1)] = false;
+                    horBound[j + i * (width+1)] = 0;
                 }
 
             }
@@ -79,11 +93,29 @@ public class Eulerian2D : MonoBehaviour
             }
         }
 
+        buildBuffers();
+    }
+
+void buildBuffers(){
+     // Create buffers
+        vertVelBuffer = new ComputeBuffer(width * (height+1), sizeof(float));
+        vertVelBuffer.SetData(verticalVelocities);
+        copyVertBuffer = new ComputeBuffer(width * (height+1), sizeof(float));
+        copyVertBuffer.SetData(copyVert);
+        horVelBuffer = new ComputeBuffer((width+1) * height, sizeof(float));
+        horVelBuffer.SetData(horizontalVelocities);
+        copyHorBuffer = new ComputeBuffer((width+1) * height, sizeof(float));
+        copyHorBuffer.SetData(copyHor);
+        vertBoundBuffer = new ComputeBuffer(width * (height+1), sizeof(int));
+        vertBoundBuffer.SetData(vertBound);
+        horBoundBuffer = new ComputeBuffer((width+1) * height, sizeof(int));
+        horBoundBuffer.SetData(horBound);
         densityBuffer = new ComputeBuffer(width * height, sizeof(float));
         densityBuffer.SetData(densities);
         positionBuffer = new ComputeBuffer(width * height, sizeof(float) * 2);
         positionBuffer.SetData(pos);
 
+        // Set buffers in material
         uint[] args = { mesh.GetIndexCount(0), (uint)(width * height), mesh.GetIndexStart(0), mesh.GetBaseVertex(0), 0};
         argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         argsBuffer.SetData(args);
@@ -91,25 +123,49 @@ public class Eulerian2D : MonoBehaviour
         material.SetBuffer("PositionBuffer", positionBuffer);
         material.SetFloat("_MaxDensity", maxDensity);
         material.SetFloat("_CellSize", cellSize);
-        
 
-        // Example: Initialize with random small velocities
-        /**
-        for (int i = 0; i < width * height; i++)
-        {
-            verticalVelocities[i] = Random.Range(-0.1f, 0.1f);
-            horizontalVelocities[i] = Random.Range(-0.1f, 0.1f); 
-        }
-        */
-    }
+        // Find kernel IDs
+        kernelAdvect = computeShader.FindKernel("Advect");
+        kernelAdvectDen = computeShader.FindKernel("AdvectDensity");
+        kernelClearDiv1 = computeShader.FindKernel("ClearDivergence1");
+        kernelClearDiv2 = computeShader.FindKernel("ClearDivergence2");
+
+        // Set buffers in compute shader
+        computeShader.SetBuffer(kernelClearDiv1, "vertVel", vertVelBuffer);
+        computeShader.SetBuffer(kernelClearDiv1, "horizVel", horVelBuffer);
+        computeShader.SetBuffer(kernelClearDiv1, "vertBoundary", vertBoundBuffer);
+        computeShader.SetBuffer(kernelClearDiv1, "horizBoundary", horBoundBuffer);
+
+        computeShader.SetBuffer(kernelClearDiv2, "vertVel", vertVelBuffer);
+        computeShader.SetBuffer(kernelClearDiv2, "horizVel", horVelBuffer);
+        computeShader.SetBuffer(kernelClearDiv2, "vertBoundary", vertBoundBuffer);
+        computeShader.SetBuffer(kernelClearDiv2, "horizBoundary", horBoundBuffer);
+
+        computeShader.SetBuffer(kernelAdvect, "vertVel", vertVelBuffer);
+        computeShader.SetBuffer(kernelAdvect, "horizVel", horVelBuffer);
+        computeShader.SetBuffer(kernelAdvect, "vertBoundary", vertBoundBuffer);
+        computeShader.SetBuffer(kernelAdvect, "horizBoundary", horBoundBuffer);
+        computeShader.SetBuffer(kernelAdvect, "OutVertVel", copyVertBuffer);
+        computeShader.SetBuffer(kernelAdvect, "OutHorizVel", copyHorBuffer);
+
+
+        // Set variables in compute shader
+        computeShader.SetInt("Width", width);
+        computeShader.SetInt("Height", height);
+        computeShader.SetFloat("DeltaT", deltaT);
+        computeShader.SetFloat("MaxDensity", maxDensity);
+        computeShader.SetFloat("CellSize", cellSize);
+        computeShader.SetFloat("OverRelaxation", overRelaxation);
+
+}
 
 void opaqueCell(int x, int y)
 {
     densities[x + y * width] = 0;
-    vertBound[x + y * width] = true;
-    vertBound[x + (y+1) * width] = true;
-    horBound[x + y * (width+1)] = true;
-    horBound[x+1 + y * (width+1)] = true;
+    vertBound[x + y * width] = 1;
+    vertBound[x + (y+1) * width] = 1;
+    horBound[x + y * (width+1)] = 1;
+    horBound[x+1 + y * (width+1)] = 1;
     verticalVelocities[x + y * width] = 0;
     verticalVelocities[x + (y+1) * width] = 0;
     horizontalVelocities[x + y * (width+1)] = 0;
@@ -131,8 +187,8 @@ void HandleMouseClick(int button)
     {
         if (button == 0)
         {
-            //IncreaseVelocityAtCell(cellX, cellY, false);
-            opaqueCell(cellX, cellY);
+            IncreaseVelocityAtCell(cellX, cellY, false);
+            //opaqueCell(cellX, cellY);
             clicked[cellX + cellY * width] = !clicked[cellX + cellY * width];
 
         }
@@ -162,23 +218,48 @@ void HandleMouseClick(int button)
         
     }
 
-    public float updateRate = 0.1f;  // Time in seconds between updates
-    private float timeSinceLastUpdate = 0f;
+
     void FixedUpdate()
     {
         
-        horBound[height/2 * (width+1)] = false;
-        horBound[height/2 * (width+1) - 1] = false;
+        horBound[height/2 * (width+1)] = 0;
+        horBound[height/2 * (width+1) - 1] = 0;
         densities[height/2 * width] = maxDensity;
         horizontalVelocities[height/2 * (width+1)] = 5.0f;
         advectDensity();
-        advect();
         
-        clearDivergence();
+        advect();
+        vertVelBuffer.SetData(verticalVelocities);
+        horVelBuffer.SetData(horizontalVelocities);
+
+        horBoundBuffer.SetData(horBound);
+        vertBoundBuffer.SetData(vertBound);
+        //computeShader.Dispatch(kernelAdvect, width*height/numThreads, 1, 1);
+        
+        for(int n=0; n<divIter; n++){
+            computeShader.Dispatch(kernelClearDiv1, width*height/numThreads, 1, 1);
+            computeShader.Dispatch(kernelClearDiv2, width*height/numThreads, 1, 1);
+        }
+        
         
         
         densityBuffer.SetData(densities);
         material.SetBuffer("DensityBuffer", densityBuffer);
+
+        vertVelBuffer.GetData(verticalVelocities);
+        horVelBuffer.GetData(horizontalVelocities);
+
+        copyVertBuffer.GetData(copyVert);
+        copyHorBuffer.GetData(copyHor);
+
+        var temp = verticalVelocities;
+        verticalVelocities = copyVert;
+        copyVert = temp;
+        temp = horizontalVelocities;
+        horizontalVelocities = copyHor;
+        copyHor = temp;
+        
+
             
            
         
@@ -193,10 +274,10 @@ void HandleMouseClick(int button)
                     float div = -verticalVelocities[j+i*width]+verticalVelocities[j+(i+1)*width] + 
                                 -horizontalVelocities[j+i*(width+1)]+horizontalVelocities[j+1+i*(width+1)];
                     div *= overRelaxation;
-                    int vup = vertBound[j + (i+1) * width] ? 0 : 1;
-                    int vdown = vertBound[j + i * width] ? 0 : 1;
-                    int hleft = horBound[j + i * (width+1)] ? 0 : 1;
-                    int hright = horBound[j+1 + i * (width+1)] ? 0 : 1;
+                    int vup = vertBound[j + (i+1) * width]==1 ? 0 : 1;
+                    int vdown = vertBound[j + i * width]==1 ? 0 : 1;
+                    int hleft = horBound[j + i * (width+1)]==1 ? 0 : 1;
+                    int hright = horBound[j+1 + i * (width+1)]==1 ? 0 : 1;
                     int tot = vup+vdown+hleft+hright;
                     if(tot == 0) continue;
                     
@@ -292,7 +373,7 @@ void HandleMouseClick(int button)
         for(int i=0; i<height+1; i++){
             for(int j=0; j<width; j++){
                 // In the middle of the edge x axis
-                if(vertBound[j + i * width]){
+                if(vertBound[j + i * width] == 1){
                     copyVert[j + i * width] = 0;
                     continue;
                 }
@@ -314,7 +395,7 @@ void HandleMouseClick(int button)
         for(int i=0; i<height; i++){
             for(int j=0; j<width+1; j++){
                 // In the middle of the edge y axis
-                if(horBound[j + i * (width+1)]){
+                if(horBound[j + i * (width+1)] == 1){
                     copyHor[j + i * (width+1)] = 0;
                     continue;
                 }
@@ -390,6 +471,7 @@ void HandleMouseClick(int button)
             {
                 for (int j = 0; j < width; j++)
                 {   
+                    /*
                     float div = verticalVelocities[j+i*width]-verticalVelocities[j+(i+1)*width] + 
                                 horizontalVelocities[j+i*(width+1)]-horizontalVelocities[j+1+i*(width+1)];
                     if(div < -0.001 || div > 0.001){
@@ -397,6 +479,7 @@ void HandleMouseClick(int button)
                         Gizmos.DrawWireCube(new Vector3(j , i , 0), new Vector3(1, 1, 0));
                         Gizmos.color = Color.white;
                     }
+                    */
                     // Compute position at the center of the cell
                     Vector3 position = new Vector3(j + 0.5f, i + 0.5f, 0);
 
